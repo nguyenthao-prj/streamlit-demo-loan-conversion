@@ -74,7 +74,9 @@ results = score_dataframe(df_raw, top_k=top_k)
 
 # Preprocess for profile metrics (NOT for model input)
 pre = load_preprocessor()
-df_business = df_raw.copy()
+df_clean = pre.transform(df_raw)
+df_business = df_clean.copy()
+
 if "Customer ID" in df_business.columns:
     df_business["Customer ID"] = df_business["Customer ID"].astype(str).str.strip()
 
@@ -85,6 +87,14 @@ df_business = df_business.merge(
     on="Customer ID",
     how="left"
 ).copy()
+
+# --- Create Term (snapshot) for UI from encoded column ---
+if "Term_Long Term" in df_business.columns:
+    df_business["Term (snapshot)"] = np.where(
+        df_business["Term_Long Term"].astype(int) == 1,
+        "Long Term",
+        "Short Term"
+    )
 
 top_label = f"Top {top_k}%"
 df_business["Priority Group"] = df_business["Priority Group"].fillna("Remaining")
@@ -375,7 +385,7 @@ else:
 
         # Rename for readability
         call_first = call_first.rename(columns={
-            "Conversion Probability (%)": "Priority Score (Percentile)",
+            "Conversion Probability (%)": "Priority Score",
             "Current Loan Amount": "Loan Amount",
         })
 
@@ -383,8 +393,8 @@ else:
         sort_cols = []
         if "Loan Amount" in call_first.columns:
             sort_cols.append("Loan Amount")
-        if "Priority Score (Percentile)" in call_first.columns:
-            sort_cols.append("Priority Score (Percentile)")
+        if "Priority Score" in call_first.columns:
+            sort_cols.append("Priority Score")
 
         if sort_cols:
             call_first = call_first.sort_values(
